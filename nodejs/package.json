@@ -1,12 +1,24 @@
 {
-  "name": "application-name",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "start": "node app.js"
-  },
-  "dependencies": {
-    "express": "3.4.8",
-    "jade": "*"
-  }
+    "name": "MusicRecommendationSystem",
+    "version": "0.0.1",
+    "description": "A music recommendation system built on top of NodeJs",
+    "keywords": ["node", "express", "mocha", "music", "recommendation", "user", "follow"],
+    "author": "Murat Derya Ozen muratdozen at gmail",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/muratdozen/BE_music_MURAT_DERYA_OZEN.git"
+    },
+    "homepage": "https://github.com/muratdozen/BE_music_MURAT_DERYA_OZEN.git",
+    "private": true,
+    "scripts": {
+        "start": "node app.js"
+    },
+    "dependencies": {
+        "express": "3.4.8",
+        "jade": "*"
+    },
+    "devDependencies": {
+        "mocha": "0.3.x",
+        "should": "3.1.3"
+    }
 }
