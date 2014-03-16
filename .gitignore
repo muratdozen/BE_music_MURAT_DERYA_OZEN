@@ -7,8 +7,13 @@ lib-cov
 *.pid
 *.gz
 
-# Intellij project files
+# Intellij
+.idea/
 *.iml
+*.iws
+
+# Mac
+.DS_Store
 
 pids
 logs
