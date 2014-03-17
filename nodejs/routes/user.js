@@ -2,9 +2,9 @@
  * POST /follow
  */
 exports.follow = function (req, res) {
-    var fromUserId = req.body.from;
-    var toUserId = req.body.to;
-    console.log("user.follow started with fromUserId", fromUserId, "toUserId", toUserId);
+    var followerId = req.body.from;
+    var followeeId = req.body.to;
+    console.log("user.follow started with fromUserId", followerId, "toUserId", followeeId);
 
     res.send(200);
 };
@@ -15,7 +15,7 @@ exports.follow = function (req, res) {
 exports.listen = function (req, res) {
     var userId = req.body.user;
     var musicId = req.body.music;
-    console.log("user.follow started with userId", userId, "musicId", musicId);
+    console.log("user.listen started with userId", userId, "musicId", musicId);
 
     res.send(200);
 };
