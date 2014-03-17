@@ -24,6 +24,7 @@ describe('user route', function () {
         }
 
         describe('happy path', function () {
+
             describe('when "to" user does not exist in the store', function () {
 
                 var fromUserId = "user1", toUserId = "user345";
@@ -170,6 +171,65 @@ describe('user route', function () {
                     followeeUser.followers.should.have.a.lengthOf(2);
                     followeeUser.followers.should.containEql(fromUserId);
                     followeeUser.followers.should.containEql(existingFollowerId);
+                    done();
+                });
+            });
+
+        })
+
+        describe('error path', function () {
+
+            describe('when "from" request parameter is not valid', function () {
+
+                var fromUserId = "user1_", toUserId = "user345";
+                var req = prepareRequestStub(fromUserId, toUserId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(toUserId));
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(2);
+                    var followeeUser = userStore.findById(toUserId);
+                    should.exist(followeeUser);
+                    should.exist(followeeUser.followers);
+                    followeeUser.followers.should.have.a.lengthOf(0);
+                    done();
+                });
+            });
+
+            describe('when "to" request parameter is not valid', function () {
+
+                var fromUserId = "user14", toUserId = "user-345";
+                var req = prepareRequestStub(fromUserId, toUserId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var followeeUser = userStore.findById(toUserId);
+                    should.not.exist(followeeUser);
                     done();
                 });
             });
