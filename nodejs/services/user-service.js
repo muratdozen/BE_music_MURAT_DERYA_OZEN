@@ -15,3 +15,16 @@ exports.addFollower = function (followerId, followeeId) {
     }
     userStore.save(followeeUser);
 }
+
+/**
+ * Add musicId to the list of musics for user with userId.
+ * If no user exists with id userId, create a new user and save it in userStore.
+ * @param userId - Id of the user.
+ * @param musicId - Id of the music.
+ */
+exports.addListenedMusic = function (userId, musicId) {
+    var user = userStore.findById(userId) || userStore.newUserObject(userId);
+    user.musics.push(musicId);
+    userStore.save(user);
+}
+

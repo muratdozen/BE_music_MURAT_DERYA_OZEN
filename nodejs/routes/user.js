@@ -34,6 +34,19 @@ exports.listen = function (req, res) {
     var musicId = req.body.music;
     console.log("user.listen started with userId", userId, "musicId", musicId);
 
+    var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
+    if (!isUserIdValid) {
+        res.send(400, validationError("user"));
+        return;
+    }
+    var isMusicIdValid = validator.validate(musicId, validator.alphaNumericPattern, false, 32);
+    if (!isMusicIdValid) {
+        res.send(400, validationError("music"));
+        return;
+    }
+
+    userService.addListenedMusic(userId, musicId);
+
     res.send(200);
 };
 
