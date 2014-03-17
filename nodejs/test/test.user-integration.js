@@ -194,7 +194,8 @@ describe('user route', function () {
 
                 it('should respond with 400 BAD REQUEST', function (done) {
                     res.should.have.property("status", 400);
-                    res.should.have.property("error");
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
                     done();
                 });
 
@@ -222,7 +223,8 @@ describe('user route', function () {
 
                 it('should respond with 400 BAD REQUEST', function (done) {
                     res.should.have.property("status", 400);
-                    res.should.have.property("error");
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
                     done();
                 });
 
