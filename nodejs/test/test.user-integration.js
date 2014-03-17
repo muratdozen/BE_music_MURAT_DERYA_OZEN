@@ -179,6 +179,36 @@ describe('user route', function () {
 
         describe('error path', function () {
 
+            describe('when "from" request parameter is not present', function () {
+
+                var toUserId = "user345";
+                var req = prepareRequestStub(undefined, toUserId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(toUserId));
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(2);
+                    var followeeUser = userStore.findById(toUserId);
+                    should.exist(followeeUser);
+                    should.exist(followeeUser.followers);
+                    followeeUser.followers.should.have.a.lengthOf(0);
+                    done();
+                });
+            });
+
             describe('when "from" request parameter is not valid', function () {
 
                 var fromUserId = "user1_", toUserId = "user345";
@@ -205,6 +235,31 @@ describe('user route', function () {
                     should.exist(followeeUser);
                     should.exist(followeeUser.followers);
                     followeeUser.followers.should.have.a.lengthOf(0);
+                    done();
+                });
+            });
+
+            describe('when "to" request parameter is not present', function () {
+
+                var fromUserId = "user14";
+                var req = prepareRequestStub(fromUserId, undefined);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
                     done();
                 });
             });
