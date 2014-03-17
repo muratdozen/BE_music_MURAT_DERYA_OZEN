@@ -238,4 +238,262 @@ describe('user route', function () {
 
         })
     })
+
+    describe('POST /listen', function () {
+
+        var prepareRequestStub = function (userId, musicId) {
+            return {"body": {"user": userId, "music": musicId}};
+        }
+
+        describe('happy path', function () {
+
+            describe('when user does not exist in the store', function () {
+
+                var userId = "user1", musicId = "m345";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 200 OK', function (done) {
+                    res.should.have.property("status", 200);
+                    res.should.have.property("body");
+                    done();
+                });
+
+                it('should create a new user object', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    done();
+                });
+
+                it('should add "musicId" as the only music to list of musics', function (done) {
+                    var user = userStore.findById(userId);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(1);
+                    user.musics[0].should.be.equal(musicId);
+                    done();
+                });
+            });
+
+            describe('when user is already saved in the store but has empty list of musics', function () {
+
+                var userId = "user61", musicId = "m3456";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(userId));
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 200 OK', function (done) {
+                    res.should.have.property("status", 200);
+                    res.should.have.property("body");
+                    done();
+                });
+
+                it('should not create a new user object', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    done();
+                });
+
+                it('should add "musicId" as the only music to list of musics', function (done) {
+                    var user = userStore.findById(userId);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(1);
+                    user.musics[0].should.be.equal(musicId);
+                    done();
+                });
+            });
+
+            describe('when user is already saved in the store but has non-empty list of musics', function () {
+
+                var userId = "user6561", musicId = "m123222", existingMusicId = "mRandomMusic1234";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    var user = userStore.newUserObject(userId);
+                    user.musics = [existingMusicId];
+                    userStore.save(user);
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 200 OK', function (done) {
+                    res.should.have.property("status", 200);
+                    res.should.have.property("body");
+                    done();
+                });
+
+                it('should not create a new user object', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    done();
+                });
+
+                it('should append "musicId" to list of musics', function (done) {
+                    var user = userStore.findById(userId);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(2);
+                    user.musics.should.containEql(existingMusicId);
+                    user.musics.should.containEql(musicId);
+                    done();
+                });
+            });
+
+            describe('when user is already saved in the store but already has music in his list of musics', function () {
+
+                var userId = "user6561", musicId = "m123222";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    var user = userStore.newUserObject(userId);
+                    user.musics = [musicId];
+                    userStore.save(user);
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 200 OK', function (done) {
+                    res.should.have.property("status", 200);
+                    res.should.have.property("body");
+                    done();
+                });
+
+                it('should not create a new user object', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    done();
+                });
+
+                it('should append "musicId" as a duplicate to list of musics', function (done) {
+                    var user = userStore.findById(userId);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(2);
+                    user.musics.should.matchEach(musicId);
+                    done();
+                });
+            });
+
+        })
+
+        describe('error path', function () {
+
+            describe('when "user" request parameter is not present', function () {
+
+                var musicId = "m345";
+                var req = prepareRequestStub(undefined, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+            });
+
+            describe('when "user" request parameter is not valid', function () {
+
+                var userId = "user1_", musicId = "m345";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
+                    done();
+                });
+            });
+
+            describe('when "music" request parameter is not present', function () {
+
+                var userId = "user1";
+                var req = prepareRequestStub(userId, undefined);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(userId));
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update the user or musics list in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(0);
+                    done();
+                });
+            });
+
+            describe('when "music" request parameter is not valid', function () {
+
+                var userId = "user1", musicId = "m_345";
+                var req = prepareRequestStub(userId, musicId);
+                var res = prepareResponseStub();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(userId));
+                    userRoute.listen(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update the user or musics list in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
+                    var user = userStore.findById(userId);
+                    should.exist(user);
+                    should.exist(user.musics);
+                    user.musics.should.have.a.lengthOf(0);
+                    done();
+                });
+            });
+
+        })
+    })
 })
