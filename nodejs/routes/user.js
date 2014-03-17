@@ -1,4 +1,5 @@
-var userStore = require('./../data_store/user-store.js');
+var userService = require('./../services/user-service');
+
 /*
  * POST /follow
  */
@@ -7,18 +8,7 @@ exports.follow = function (req, res) {
     var followeeId = req.body.to;
     console.log("user.follow started with fromUserId", followerId, "toUserId", followeeId);
 
-
-
-    var followeeUser = userStore.findById(followeeId) || userStore.newUserObject(followeeId);
-    var followers = followeeUser.followers;
-    if (followers.indexOf(followerId) == -1) {
-        followers.push(followerId);
-        followeeUser.followers = followers;
-    }
-    userStore.save(followeeUser);
-
-
-
+    userService.addFollower(followerId, followeeId);
 
     res.send(200);
 };
