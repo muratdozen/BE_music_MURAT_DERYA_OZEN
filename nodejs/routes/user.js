@@ -1,4 +1,5 @@
 var userService = require('./../services/user-service');
+var validator = require('./../util/validator.js');
 
 /*
  * POST /follow
@@ -6,7 +7,19 @@ var userService = require('./../services/user-service');
 exports.follow = function (req, res) {
     var followerId = req.body.from;
     var followeeId = req.body.to;
+
     console.log("user.follow started with fromUserId", followerId, "toUserId", followeeId);
+
+    var isFollowerIdValid = validator.validate(followerId, validator.alphaNumericPattern, false, 32);
+    if (!isFollowerIdValid) {
+        res.send(400, validationError("from"));
+        return;
+    }
+    var isFolloweeIdValid = validator.validate(followeeId, validator.alphaNumericPattern, false, 32);
+    if (!isFolloweeIdValid) {
+        res.send(400, validationError("to"));
+        return;
+    }
 
     userService.addFollower(followerId, followeeId);
 
@@ -33,3 +46,12 @@ exports.recommendations = function (req, res) {
 
     res.send(200, {list: ["abc", "xyz", "123"]});
 };
+
+function validationError(invalidFieldName) {
+    return {
+        error: {
+            code: "ValidationError",
+            message: "Invalid request parameter: '" + invalidFieldName + "'"
+        }
+    };
+}
