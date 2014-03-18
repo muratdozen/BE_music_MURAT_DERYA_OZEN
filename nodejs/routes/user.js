@@ -64,7 +64,7 @@ exports.recommendations = function (req, res) {
         return;
     }
 
-    recommendationService.recommendMusicFor(userId, function(result) {
+    recommendationService.recommendMusicFor(userId, function (result) {
         res.send(200, result);
     });
 };
