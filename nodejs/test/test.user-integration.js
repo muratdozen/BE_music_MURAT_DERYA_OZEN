@@ -1,10 +1,7 @@
 var should = require('should');
 var assert = require('assert');
-var request = require('supertest');
 var userRoute = require('./../routes/user.js');
 var userStore = require('./../data_store/user-store.js');
-
-var url = 'http://localhost:3000';
 
 var prepareResponseStub = function () {
     var res = {};
