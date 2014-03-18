@@ -1,0 +1,14 @@
+{
+    "m1" : ["jazz","old school", "instrumental"],
+    "m2" : ["samba", "60s"],
+    "m3" : ["rock", "alternative"],
+    "m4" : ["rock", "alternative"],
+    "m5" : ["folk", "instrumental"],
+    "m6" : ["60s", "rock", "old school"],
+    "m7" : ["alternative", "dance"],
+    "m8" : ["electronic", "pop"],
+    "m9" : ["60s","rock"],
+    "m10": ["60s", "jazz"],
+    "m11": ["samba"],
+    "m12": ["jazz", "instrumental"]
+}
