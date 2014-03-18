@@ -1,4 +1,5 @@
-var userService = require('./../services/user-service');
+var userService = require('./../services/user-service.js');
+var recommendationService = require('./../services/recommendation-service.js');
 var validator = require('./../util/validator.js');
 
 /*
@@ -57,7 +58,15 @@ exports.recommendations = function (req, res) {
     var userId = req.query.user;
     console.log("user.recommendations started with userId", userId);
 
-    res.send(200, {list: ["abc", "xyz", "123"]});
+    var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
+    if (!isUserIdValid) {
+        res.send(400, validationError("user"));
+        return;
+    }
+
+    recommendationService.recommendMusicFor(userId, function(result) {
+        res.send(200, result);
+    });
 };
 
 function validationError(invalidFieldName) {
