@@ -33,6 +33,7 @@ exports.follow = function (req, res) {
 exports.listen = function (req, res) {
     var userId = req.body.user;
     var musicId = req.body.music;
+
     console.log("user.listen started with userId", userId, "musicId", musicId);
 
     var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
@@ -56,6 +57,7 @@ exports.listen = function (req, res) {
  */
 exports.recommendations = function (req, res) {
     var userId = req.query.user;
+
     console.log("user.recommendations started with userId", userId);
 
     var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
@@ -65,7 +67,7 @@ exports.recommendations = function (req, res) {
     }
 
     recommendationService.recommendMusicFor(userId, function (result) {
-        res.send(200, result);
+        res.send(200, {"list": result});
     });
 };
 
