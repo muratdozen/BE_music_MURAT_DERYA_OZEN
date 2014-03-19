@@ -1,7 +1,14 @@
 exports.recommendMusicFor = function (userId, callback) {
-    var result = ["abc", "xyz", "abc", "xyz", "abc"];
-    result = rec(userId).results;
-    callback(result);
+    try {
+        var result = rec(userId).results;
+        var ret = result.slice(0, 5).map(function(entry) {
+            return entry.musicId;
+        });
+        callback(undefined, ret);
+    } catch (err) {
+        console.error(err);
+        callback(err, undefined);
+    }
 }
 var musics = {    "m1": ["jazz", "old school", "instrumental"], "m2": ["samba", "60s"], "m3": ["rock", "alternative"], "m4": ["rock", "alternative"], "m5": ["folk", "instrumental"], "m6": ["60s", "rock", "old school"], "m7": ["alternative", "dance"], "m8": ["electronic", "pop"], "m9": ["60s", "rock"], "m10": ["60s", "jazz"], "m11": ["samba"], "m12": ["jazz", "instrumental"]};
 var users = {    "a": {        "userId": "a", "followedUsers": {"b": true, "c": true}, "musics": {"m2": 1, "m6": 1}    }, "b": {        "userId": "b", "followedUsers": {"c": true, "d": true, "e": true}, "musics": {"m4": 1, "m9": 1}    }, "c": {        "userId": "c", "followedUsers": {"a": true}, "musics": {"m8": 1, "m7": 1}    }, "d": {        "userId": "d", "followedUsers": {}, "musics": {"m2": 1, "m6": 1, "m7": 1}    }, "e": {        "userId": "e", "followedUsers": {}, "musics": {"m11": 1}    }};
