@@ -644,7 +644,8 @@ describe('user route', function () {
                     musicStore.save(musicStore.newMusicObject("m10", ["60s", "jazz"]));
                     musicStore.save(musicStore.newMusicObject("m11", ["samba"]));
                     musicStore.save(musicStore.newMusicObject("m12", ["jazz", "instrumental"]));
-                    userRoute.listen(req, res);
+
+                    userRoute.recommendations(req, res);
                 })
 
                 it('should respond with 200 OK', function (done) {
@@ -718,7 +719,8 @@ describe('user route', function () {
                     musicStore.save(musicStore.newMusicObject("m2", ["samba", "60s"]));
                     musicStore.save(musicStore.newMusicObject("m3", ["rock", "alternative"]));
                     musicStore.save(musicStore.newMusicObject("m5", ["folk", "instrumental"]));
-                    userRoute.listen(req, res);
+
+                    userRoute.recommendations(req, res);
                 })
 
                 it('should respond with 200 OK', function (done) {
