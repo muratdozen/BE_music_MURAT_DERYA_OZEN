@@ -1,4 +1,5 @@
 var userService = require('./../services/user-service.js');
+var userStore = require('./../data_store/user-store.js');
 var recommendationService = require('./../services/recommendation-service.js');
 var validator = require('./../util/validator.js');
 
@@ -11,6 +12,7 @@ exports.follow = function (req, res) {
 
     console.log("user.follow started with fromUserId", followerId, "toUserId", followeeId);
 
+    // validate user input - if invalid, respond with 400 BAD REQUEST
     var isFollowerIdValid = validator.validate(followerId, validator.alphaNumericPattern, false, 32);
     if (!isFollowerIdValid) {
         res.send(400, validationError("from"));
@@ -22,6 +24,7 @@ exports.follow = function (req, res) {
         return;
     }
 
+    // delegate to userService and respond 200 OK
     userService.addFollower(followerId, followeeId);
 
     res.send(200);
@@ -36,6 +39,7 @@ exports.listen = function (req, res) {
 
     console.log("user.listen started with userId", userId, "musicId", musicId);
 
+    // validate user input - if invalid, respond with 400 BAD REQUEST
     var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
     if (!isUserIdValid) {
         res.send(400, validationError("user"));
@@ -47,6 +51,7 @@ exports.listen = function (req, res) {
         return;
     }
 
+    // delegate to userService and respond 200 OK
     userService.addListenedMusic(userId, musicId);
 
     res.send(200);
@@ -60,13 +65,27 @@ exports.recommendations = function (req, res) {
 
     console.log("user.recommendations started with userId", userId);
 
+    // validate user input - if invalid, respond with 400 BAD REQUEST
     var isUserIdValid = validator.validate(userId, validator.alphaNumericPattern, false, 32);
     if (!isUserIdValid) {
         res.send(400, validationError("user"));
         return;
     }
 
-    recommendationService.recommendMusicFor(userId, function (result) {
+    // make sure the requested resource exists
+    if (!userStore.findById(userId)) {
+        // if a non-existent resource is requested, respond with 404 NOT FOUND
+        res.send(404);
+        return;
+    }
+
+    // delegate to recommendationService
+    // respond with 200 OK upon successful async callback or if err exists, 500 INTERNAL SERVER ERROR
+    recommendationService.recommendMusicFor(userId, function (err, result) {
+        if (err) {
+            res.send(500, internalError(err));
+            return;
+        }
         res.send(200, {"list": result});
     });
 };
@@ -76,6 +95,15 @@ function validationError(invalidFieldName) {
         error: {
             code: "ValidationError",
             message: "Invalid request parameter: '" + invalidFieldName + "'"
+        }
+    };
+}
+
+function internalError(error) {
+    return {
+        error: {
+            code: "InternalError",
+            message: error
         }
     };
 }
