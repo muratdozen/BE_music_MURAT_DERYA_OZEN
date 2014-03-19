@@ -1,0 +1,11 @@
+{
+  "description": "understand the list as [0] is following [1]",
+  "operations": [
+    ["a","b"],
+    ["a","c"],
+    ["b","c"],
+    ["b","d"],
+    ["b","e"],
+    ["c","a"]
+  ]
+}
