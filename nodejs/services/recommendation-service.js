@@ -1,12 +1,13 @@
 var userStore = require('./../data_store/user-store.js');
 var musicStore = require('./../data_store/music-store.js');
 
+/* Constants */
 var NUM_RECOMMENDATIONS = 5;
 var FOLLOWER_BIAS_COEFFICIENT = 2, ALREADY_LISTENED_COEFFICIENT = 1 / 10;
 
 exports.recommendMusicFor = function (userId, callback) {
     try {
-        var results = rec(userId);
+        var results = recommendBasedOnUsers(userId);
         var ret = results.slice(0, NUM_RECOMMENDATIONS).map(function (entry) {
             return entry.musicId;
         });
@@ -16,6 +17,95 @@ exports.recommendMusicFor = function (userId, callback) {
         callback(err, undefined);
     }
 }
+
+/**
+ * Returns music recommendations for userId.
+ * Recommendations are based on what userId's taste of music
+ * (what and how many times he has listened to before),
+ * what the users connected to him listens to (connections of all degrees),
+ * and the popularity of genres (hit genres).
+ *
+ * The return value is a list of objects that has two keys; a rating and a musicId.
+ * The higher the rating, the stronger the recommendation.
+ * The list is sorted in ascending order of ratings.
+ */
+var recommendBasedOnUsers = function (userId) {
+    // compute ratings for each genre
+    var genreRatings = computeGenreRatings(userId);
+    log("GENRE RATINGS", genreRatings);
+
+    var genresToMusicIdsMap = musicStore.buildReverseIndexByGenre();
+
+    // now that each genre is assigned a rating
+    // compute ratings for each music to find out which music contains the highest rated genres.
+    // the rating for a music M is equal to SUM(rating of 'g' for each genre 'g' in M)
+    var musicRatings = {};
+    for (var genre in genreRatings) {
+        var genreRating = genreRatings[genre];
+        var musicIds = genresToMusicIdsMap[genre];
+        var lenMusics = musicIds.length;
+        for (var i = 0; i < lenMusics; ++i) {
+            var musicId = musicIds[i];
+            if (musicRatings[musicId]) musicRatings[musicId] *= genreRating;
+            else musicRatings[musicId] = genreRating;
+        }
+    }
+
+    // there may still be musics that are not rated (if they are not listened to before by any user)
+    // assign unheard musics a rating of -1
+    var nonRatedMusics = keySetDifferenceAMinusB(musicStore.getAllMusicIdsAsSet(), musicRatings);
+    var lenNonRatedMusics = nonRatedMusics.length;
+    for (i = 0; i < lenNonRatedMusics; ++i) {
+        musicRatings[nonRatedMusics[i]] = -1;
+    }
+
+    // gather the results in a list
+    var results = [];
+    for (var musicId in musicRatings) {
+        var musicIdRating = musicRatings[musicId];
+        results.push({"ranking": musicIdRating, "musicId": musicId});
+    }
+
+    // sort the results by ranking
+    results.sort(function (a, b) {
+        return -(a.ranking - b.ranking); // ascending sort
+    });
+    removeDuplicatesFromSortedResultArray(results, 0);
+    log("RECOMMENDATION RESULTS", results);
+    return results;
+};
+
+/**
+ * Compute a rating for each genre based on user similarity to connections,
+ * the history of listened genres and the popularity of each genre.
+ */
+var computeGenreRatings = function (userId) {
+    // build an index of how many times a user has listened to a certain genre
+    var genreNumListenedByUser = buildGenreNumListenedByUserIndex();
+
+    // assign a rating to each genre
+    var genreRatings = {};
+    // for each user
+    for (var otherUserId in genreNumListenedByUser) {
+        if (otherUserId == userId) continue;
+        // compute the similarity between taste of music
+        var similarity = computeSimilarity(genreNumListenedByUser, userId, otherUserId);
+        // find the degree of connection between the two users
+        var followerDegree = findFollowerRelationshipDegree(userId, otherUserId);
+        for (var genre in genreNumListenedByUser[otherUserId]) {
+            // record if this genre is already listened by the user
+            var alreadyListened = genreNumListenedByUser[userId][genre] ? true : false;
+            // calculate a rating for this genre based on similarity,
+            // degree of connection, and whether he has discovered this genre before
+            var rating = calculateRatingForGenre(similarity, followerDegree, alreadyListened);
+            // update the ratings
+            if (genreRatings[genre]) genreRatings[genre] += rating;
+            else genreRatings[genre] = rating;
+        }
+    }
+    return genreRatings;
+}
+
 
 /**
  * Builds an index to keep how many times a user has listened to a certain genre.
@@ -52,6 +142,18 @@ var buildGenreNumListenedByUserIndex = function () {
 };
 
 /**
+ * Calculates a rating based on user similarity score,
+ * followerDegree (relationship/closeness in the graph)
+ * and whether the user already listened to this genre or not
+ * (so as to favor discovery of new genres).
+ */
+var calculateRatingForGenre = function (userSimilarity, followerDegree, alreadyListened) {
+    var followerBias = followerDegree && followerDegree != 0 && followerDegree < 4 ? FOLLOWER_BIAS_COEFFICIENT * (1 / followerDegree) : 1 / 10;
+    var alreadyListenedBias = alreadyListened ? ALREADY_LISTENED_COEFFICIENT : 1;
+    return (userSimilarity != 0 ? userSimilarity : 1) * followerBias * alreadyListenedBias;
+};
+
+/**
  * Computes the similarity between userId1's taste of music and userId2's taste of music.
  * The similarity is defined as SUM(number of times userId1 has listened to genre g for each g in M)
  * where M is the set of genres mutually listened by both userId1 and userId2.
@@ -70,10 +172,6 @@ var computeSimilarity = function (genreNumListenedByUser, userId1, userId2) {
         }
     }
     return sim;
-};
-
-var addAllKeysInDictionaryToList = function (dict, list) {
-    for (var key in dict) list.push(key);
 };
 
 /**
@@ -115,17 +213,50 @@ var findFollowerRelationshipDegree = function (userId, otherUserId) {
     return 0;
 };
 
+/******************************************************************************************/
+/***************************** * * * * * * * * * * * * * * * * ****************************/
+/***************************** MISCELLANEOUS HELPER FUNCTIONS *****************************/
+/***************************** * * * * * * * * * * * * * * * * ****************************/
+/******************************************************************************************/
+
 /**
- * Calculates a rating based on user similarity score,
- * followerDegree (relationship/closeness in the graph)
- * and whether the user already listened to this genre or not
- * (so as to favor discovery of new genres).
+ * Recursively remove duplicate results from the sorted array of recommendations.
  */
-var calculateRatingForGenre = function (userSimilarity, followerDegree, alreadyListened) {
-    var followerBias = followerDegree && followerDegree != 0 && followerDegree < 4 ? FOLLOWER_BIAS_COEFFICIENT * (1 / followerDegree) : 1 / 10;
-    var alreadyListenedBias = alreadyListened ? ALREADY_LISTENED_COEFFICIENT : 1;
-    return (userSimilarity != 0 ? userSimilarity : 1) * followerBias * alreadyListenedBias;
-};
+var removeDuplicatesFromSortedResultArray = function (arr, start) {
+    var len = arr.length;
+
+    // base case
+    if (start >= len) {
+        return arr;
+    }
+
+    for (var i = start; i < len - 1; ++i) {
+        var current = arr[i], next = arr[i + 1];
+        if (current.ranking == next.ranking) {
+            var currentMusicId = current.musicId, nextMusicId = next.musicId;
+            var currentListOfGenres = musicStore.findById(currentMusicId);
+            var nextListOfGenres = musicStore.findById(nextMusicId);
+            if (arraysEqual(currentListOfGenres, nextListOfGenres)) {
+                arr.splice(i, 1);
+                return removeDuplicatesFromSortedResultArray(arr, i);
+            }
+        }
+    }
+}
+
+/**
+ * Returns true if both arrays have the same content, false otherwise.
+ */
+var arraysEqual = function (a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+
+    for (var i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
 
 /**
  * Returns the set difference KA-KB, i.e KA (subtract) KB
@@ -138,126 +269,15 @@ var keySetDifferenceAMinusB = function (a, b) {
     return diff;
 };
 
-var computeGenreRatings = function (userId) {
-    // build an index of how many times a user has listened to a certain genre
-    var genreNumListenedByUser = buildGenreNumListenedByUserIndex();
-
-    // assign a rating to each genre
-    var genreRatings = {};
-    // for each user
-    for (var otherUserId in genreNumListenedByUser) {
-        if (otherUserId == userId) continue;
-        // compute the similarity between taste of music
-        var similarity = computeSimilarity(genreNumListenedByUser, userId, otherUserId);
-        // find the degree of connection between the two users
-        var followerDegree = findFollowerRelationshipDegree(userId, otherUserId);
-        for (var genre in genreNumListenedByUser[otherUserId]) {
-            // record if this genre is already listened by the user
-            var alreadyListened = genreNumListenedByUser[userId][genre] ? true : false;
-            // calculate a rating for this genre based on similarity,
-            // degree of connection, and whether he has discovered this genre before
-            var rating = calculateRatingForGenre(similarity, followerDegree, alreadyListened);
-            // update the ratings
-            if (genreRatings[genre]) genreRatings[genre] += rating;
-            else genreRatings[genre] = rating;
-        }
-    }
-    return genreRatings;
-}
-
-/**
- * Returns music recommendations for userId.
- * Recommendations are based on what userId's taste of music
- * (what and how many times he has listened to before),
- * what the users connected to him listens to (connections of all degrees),
- * and the popularity of genres (hit genres).
- *
- * The return value is a list of objects that has two keys; a rating and a musicId.
- * The higher the rating, the stronger the recommendation.
- * The list is sorted in ascending order of ratings.
- */
-var rec = function (userId) {
-    // compute ratings for each genre
-    var genreRatings = computeGenreRatings(userId);
-    log("GENRE RATINGS", genreRatings);
-
-    var genresToMusicIdsMap = musicStore.buildReverseIndexByGenre();
-
-    // now that each genre is assigned a rating
-    // compute ratings for each music to find out which music contains the highest rated genres.
-    // the rating for a music M is equal to SUM(rating of 'g' for each genre 'g' in M)
-    var musicRatings = {};
-    for (var genre in genreRatings) {
-        var genreRating = genreRatings[genre];
-        var musicIds = genresToMusicIdsMap[genre];
-        var lenMusics = musicIds.length;
-        for (var i = 0; i < lenMusics; ++i) {
-            var musicId = musicIds[i];
-            if (musicRatings[musicId]) musicRatings[musicId] *= genreRating;
-            else musicRatings[musicId] = genreRating;
-        }
-    }
-
-    // there may still be musics that are not rated (if they are not listened to before by any user)
-    // assign unheard musics a rating of -1
-    var nonRatedMusics = keySetDifferenceAMinusB(musicStore.getAllMusicIdsAsSet(), musicRatings);
-    var lenNonRatedMusics = nonRatedMusics.length;
-    for (i = 0; i < lenNonRatedMusics; ++i) {
-        musicRatings[nonRatedMusics[i]] = -1;
-    }
-
-    // gather the results in a list
-    var results = [];
-    for (var musicId in musicRatings) {
-        var musicIdRating = musicRatings[musicId];
-        results.push({"ranking": musicIdRating, "musicId": musicId});
-    }
-
-    // sort the results by ranking
-    results.sort(function (a, b) {
-        return -(a.ranking - b.ranking); // ascending sort
-    });
-    log("RECOMMENDATION RESULTS", results);
-    removeDuplicatesFromResultArray(results, 0);
-    return results;
+var addAllKeysInDictionaryToList = function (dict, list) {
+    for (var key in dict) list.push(key);
 };
 
-var log = function(header, content) {
+var log = function (header, content) {
     console.log();
     console.log("**********************");
     console.log(header);
     console.log(content);
     console.log("**********************");
     console.log();
-}
-
-var removeDuplicatesFromResultArray = function(arr, start) {
-    var len = arr.length;
-    for (var i = start; i < len - 1; ++i) {
-        var current = arr[i], next = arr[i + 1];
-        if (current.ranking == next.ranking) {
-            var currentMusicId = current.musicId, nextMusicId = next.musicId;
-            var currentListOfGenres = musicStore.findById(currentMusicId);
-            var nextListOfGenres = musicStore.findById(nextMusicId);
-            if (arraysEqual(currentListOfGenres, nextListOfGenres)) {
-                arr.splice(i, 1);
-                removeDuplicatesFromResultArray(arr, i);
-                return;
-            }
-        }
-    }
-}
-
-var arraysEqual=function(a, b) {
-    if (a === b) return true;
-    if (a == null || b == null) return false;
-    if (a.length != b.length) return false;
-
-    // If you don't care about the order of the elements inside
-    // the array, you should sort both arrays here.
-
-    for (var i = 0; i < a.length; ++i) {
-        if (a[i] !== b[i]) return false;
-    }
-    return true;
 }
