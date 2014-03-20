@@ -2,7 +2,7 @@ var userStore = require('./../data_store/user-store.js');
 var musicStore = require('./../data_store/music-store.js');
 
 var NUM_RECOMMENDATIONS = 5;
-var FOLLOWER_BIAS_COEFFICIENT = 2, ALREADY_LISTENED_COEFFICIENT = 1 / 100;
+var FOLLOWER_BIAS_COEFFICIENT = 2, ALREADY_LISTENED_COEFFICIENT = 1 / 10;
 
 exports.recommendMusicFor = function (userId, callback) {
     try {
@@ -218,6 +218,7 @@ var rec = function (userId) {
         return -(a.ranking - b.ranking); // ascending sort
     });
     log("RECOMMENDATION RESULTS", results);
+    removeDuplicatesFromResultArray(results, 0);
     return results;
 };
 
@@ -228,4 +229,35 @@ var log = function(header, content) {
     console.log(content);
     console.log("**********************");
     console.log();
+}
+
+var removeDuplicatesFromResultArray = function(arr, start) {
+    var len = arr.length;
+    for (var i = start; i < len - 1; ++i) {
+        var current = arr[i], next = arr[i + 1];
+        if (current.ranking == next.ranking) {
+            var currentMusicId = current.musicId, nextMusicId = next.musicId;
+            var currentListOfGenres = musicStore.findById(currentMusicId);
+            var nextListOfGenres = musicStore.findById(nextMusicId);
+            if (arraysEqual(currentListOfGenres, nextListOfGenres)) {
+                arr.splice(i, 1);
+                removeDuplicatesFromResultArray(arr, i);
+                return;
+            }
+        }
+    }
+}
+
+var arraysEqual=function(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+
+    // If you don't care about the order of the elements inside
+    // the array, you should sort both arrays here.
+
+    for (var i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
