@@ -27,12 +27,11 @@ describe('user route', function () {
 
         describe('happy path', function () {
 
-            describe('when "to" user does not exist in the store', function () {
+            describe('when "from" user does not exist in the store', function () {
 
                 var fromUserId = "user1", toUserId = "user345";
                 var req = mockRequest(fromUserId, toUserId);
                 var res = mockResponse();
-
 
                 before(function () {
                     userStore.clear();
@@ -45,24 +44,24 @@ describe('user route', function () {
                     done();
                 });
 
-                it('should create a new user object for "to"', function (done) {
+                it('should create a new user object for "from"', function (done) {
                     userStore.size().should.be.equal(1);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser);
                     done();
                 });
 
-                it('should add "from" as the only follower to "to"', function (done) {
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(1);
-                    followeeUser.followers[0].should.be.equal(fromUserId);
+                it('should add "to" as the only followed user to "from"', function (done) {
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(1);
+                    should.exist(followerUser.followedUsers[toUserId]);
                     done();
                 });
 
             });
 
-            describe('when "to" user is already in the store but has no followers', function () {
+            describe('when "from" user is already in the store but follows noone', function () {
 
                 var fromUserId = "user1333333", toUserId = "usernnnn345";
                 var req = mockRequest(fromUserId, toUserId);
@@ -70,8 +69,8 @@ describe('user route', function () {
 
                 before(function () {
                     userStore.clear();
-                    var toUser = userStore.newUserObject(toUserId);
-                    userStore.save(toUser);
+                    var fromUser = userStore.newUserObject(fromUserId);
+                    userStore.save(fromUser);
                     userRoute.follow(req, res);
                 })
 
@@ -81,34 +80,35 @@ describe('user route', function () {
                     done();
                 });
 
-                it('should not create a new user object for "to"', function (done) {
+                it('should not create a new user object for "from"', function (done) {
                     userStore.size().should.be.equal(1);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser);
                     done();
                 });
 
-                it('should add "from" as the only follower to "to"', function (done) {
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(1);
-                    followeeUser.followers[0].should.be.equal(fromUserId);
+                it('should add "to" as the only followed user to "from"', function (done) {
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(1);
+                    should.exist(followerUser.followedUsers[toUserId]);
                     done();
                 });
 
             });
 
-            describe('when "to" user is already in the store and has followers but not followed by "from"', function () {
+            describe('when "from" user is already in the store and has followedUsers but does not follow "to"', function () {
 
-                var fromUserId = "user756", toUserId = "userfghj", existingFollowerId1 = "followerId3523", existingFollowerId2 = "followerId1111";
+                var fromUserId = "user756", toUserId = "userfghj", existingFollowedId1 = "followerId3523", existingFollowedId2 = "followerId1111";
                 var req = mockRequest(fromUserId, toUserId);
                 var res = mockResponse();
 
                 before(function () {
                     userStore.clear();
-                    var toUser = userStore.newUserObject(toUserId);
-                    toUser.followers = [existingFollowerId1, existingFollowerId2];
-                    userStore.save(toUser);
+                    var fromUser = userStore.newUserObject(fromUserId);
+                    fromUser.followedUsers[existingFollowedId1] = true;
+                    fromUser.followedUsers[existingFollowedId2] = true;
+                    userStore.save(fromUser);
                     userRoute.follow(req, res);
                 })
 
@@ -118,36 +118,37 @@ describe('user route', function () {
                     done();
                 });
 
-                it('should not create a new user object for "to"', function (done) {
+                it('should not create a new user object for "from"', function (done) {
                     userStore.size().should.be.equal(1);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser);
                     done();
                 });
 
-                it('should include "from" in the followers of "to"', function (done) {
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(3);
-                    followeeUser.followers.should.containEql(fromUserId);
-                    followeeUser.followers.should.containEql(existingFollowerId1);
-                    followeeUser.followers.should.containEql(existingFollowerId2);
+                it('should include "to" in the followedUsers of "from"', function (done) {
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(3);
+                    should.exist(followerUser.followedUsers[toUserId]);
+                    should.exist(followerUser.followedUsers[existingFollowedId1]);
+                    should.exist(followerUser.followedUsers[existingFollowedId2]);
                     done();
                 });
 
             });
 
-            describe('when "to" user is already in the store and has followers and "from" is already a follower', function () {
+            describe('when "from" user is already in the store and follows several users and "to" is already followed', function () {
 
-                var fromUserId = "user7xxxx56", toUserId = "userfyyyyyghj", existingFollowerId = "randomFollowerId3523";
+                var fromUserId = "user7xxxx56", toUserId = "userfyyyyyghj", existingFollowedId = "randomFollowerId3523";
                 var req = mockRequest(fromUserId, toUserId);
                 var res = mockResponse();
 
                 before(function () {
                     userStore.clear();
-                    var toUser = userStore.newUserObject(toUserId);
-                    toUser.followers = [existingFollowerId, fromUserId];
-                    userStore.save(toUser);
+                    var fromUser = userStore.newUserObject(fromUserId);
+                    fromUser.followedUsers[existingFollowedId] = true;
+                    fromUser.followedUsers[toUserId] = true;
+                    userStore.save(fromUser);
                     userRoute.follow(req, res);
                 })
 
@@ -157,19 +158,19 @@ describe('user route', function () {
                     done();
                 });
 
-                it('should not create a new user object for "to"', function (done) {
+                it('should not create a new user object for "from"', function (done) {
                     userStore.size().should.be.equal(1);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser);
                     done();
                 });
 
-                it('should not add "from" as a follower of "to" so as to not permit duplicate followers', function (done) {
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(2);
-                    followeeUser.followers.should.containEql(fromUserId);
-                    followeeUser.followers.should.containEql(existingFollowerId);
+                it('should not add "to" as a followedUser for "from" so as to not permit duplicate followers', function (done) {
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(2);
+                    should.exist(followerUser.followedUsers[toUserId]);
+                    should.exist(followerUser.followedUsers[existingFollowedId]);
                     done();
                 });
 
@@ -179,76 +180,15 @@ describe('user route', function () {
 
         describe('error path', function () {
 
-            describe('when "from" request parameter is not present', function () {
-
-                var toUserId = "user345";
-                var req = mockRequest(undefined, toUserId);
-                var res = mockResponse();
-
-                before(function () {
-                    userStore.clear();
-                    userStore.save(userStore.newUserObject(toUserId));
-                    userStore.save(userStore.newUserObject("randomUser7654"));
-                    userRoute.follow(req, res);
-                })
-
-                it('should respond with 400 BAD REQUEST', function (done) {
-                    res.should.have.property("status", 400);
-                    res.should.have.property("body");
-                    res.body.should.have.property("error");
-                    done();
-                });
-
-                it('should not save/update a user or follower in the userStore', function (done) {
-                    userStore.size().should.be.equal(2);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(0);
-                    done();
-                });
-
-            });
-
-            describe('when "from" request parameter is not valid', function () {
-
-                var fromUserId = "user1_", toUserId = "user345";
-                var req = mockRequest(fromUserId, toUserId);
-                var res = mockResponse();
-
-                before(function () {
-                    userStore.clear();
-                    userStore.save(userStore.newUserObject(toUserId));
-                    userStore.save(userStore.newUserObject("randomUser7654"));
-                    userRoute.follow(req, res);
-                })
-
-                it('should respond with 400 BAD REQUEST', function (done) {
-                    res.should.have.property("status", 400);
-                    res.should.have.property("body");
-                    res.body.should.have.property("error");
-                    done();
-                });
-
-                it('should not save/update a user or follower in the userStore', function (done) {
-                    userStore.size().should.be.equal(2);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.exist(followeeUser);
-                    should.exist(followeeUser.followers);
-                    followeeUser.followers.should.have.a.lengthOf(0);
-                    done();
-                });
-
-            });
-
             describe('when "to" request parameter is not present', function () {
 
-                var fromUserId = "user14";
-                var req = mockRequest(fromUserId, undefined);
+                var fromUserId = "user345";
+                var req = mockRequest(undefined, fromUserId);
                 var res = mockResponse();
 
                 before(function () {
                     userStore.clear();
+                    userStore.save(userStore.newUserObject(fromUserId));
                     userStore.save(userStore.newUserObject("randomUser7654"));
                     userRoute.follow(req, res);
                 })
@@ -261,7 +201,11 @@ describe('user route', function () {
                 });
 
                 it('should not save/update a user or follower in the userStore', function (done) {
-                    userStore.size().should.be.equal(1);
+                    userStore.size().should.be.equal(2);
+                    var followerUser= userStore.findById(fromUserId);
+                    should.exist(followerUser);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(0);
                     done();
                 });
 
@@ -269,7 +213,64 @@ describe('user route', function () {
 
             describe('when "to" request parameter is not valid', function () {
 
-                var fromUserId = "user14", toUserId = "user-345";
+                var fromUserId = "user1", toUserId = "user345_";
+                var req = mockRequest(fromUserId, toUserId);
+                var res = mockResponse();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject(fromUserId));
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(2);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.exist(followerUser);
+                    should.exist(followerUser.followedUsers);
+                    Object.keys(followerUser.followedUsers).should.have.a.lengthOf(0);
+                    done();
+                });
+
+            });
+
+            describe('when "from" request parameter is not present', function () {
+
+                var toUserId = "user14";
+                var req = mockRequest(undefined, toUserId);
+                var res = mockResponse();
+
+                before(function () {
+                    userStore.clear();
+                    userStore.save(userStore.newUserObject("randomUser7654"));
+                    userRoute.follow(req, res);
+                })
+
+                it('should respond with 400 BAD REQUEST', function (done) {
+                    res.should.have.property("status", 400);
+                    res.should.have.property("body");
+                    res.body.should.have.property("error");
+                    done();
+                });
+
+                it('should not save/update a user or follower in the userStore', function (done) {
+                    userStore.size().should.be.equal(1);
+                    done();
+                });
+
+            });
+
+            describe('when "from" request parameter is not valid', function () {
+
+                var fromUserId = "user-14", toUserId = "user345";
                 var req = mockRequest(fromUserId, toUserId);
                 var res = mockResponse();
 
@@ -288,8 +289,8 @@ describe('user route', function () {
 
                 it('should not save/update a user or follower in the userStore', function (done) {
                     userStore.size().should.be.equal(1);
-                    var followeeUser = userStore.findById(toUserId);
-                    should.not.exist(followeeUser);
+                    var followerUser = userStore.findById(fromUserId);
+                    should.not.exist(followerUser);
                     done();
                 });
 
@@ -332,8 +333,9 @@ describe('user route', function () {
                 it('should add "musicId" as the only music to list of musics', function (done) {
                     var user = userStore.findById(userId);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(1);
-                    user.musics[0].should.be.equal(musicId);
+                    Object.keys(user.musics).should.have.a.lengthOf(1);
+                    should.exist(user.musics[musicId]);
+                    user.musics[musicId].should.be.equal(1);
                     done();
                 });
 
@@ -367,8 +369,9 @@ describe('user route', function () {
                 it('should add "musicId" as the only music to list of musics', function (done) {
                     var user = userStore.findById(userId);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(1);
-                    user.musics[0].should.be.equal(musicId);
+                    Object.keys(user.musics).should.have.a.lengthOf(1);
+                    should.exist(user.musics[musicId]);
+                    user.musics[musicId].should.be.equal(1);
                     done();
                 });
 
@@ -383,7 +386,7 @@ describe('user route', function () {
                 before(function () {
                     userStore.clear();
                     var user = userStore.newUserObject(userId);
-                    user.musics = [existingMusicId];
+                    user.musics[existingMusicId] = 1;
                     userStore.save(user);
                     userRoute.listen(req, res);
                 })
@@ -404,15 +407,15 @@ describe('user route', function () {
                 it('should append "musicId" to list of musics', function (done) {
                     var user = userStore.findById(userId);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(2);
-                    user.musics.should.containEql(existingMusicId);
-                    user.musics.should.containEql(musicId);
+                    Object.keys(user.musics).should.have.a.lengthOf(2);
+                    user.musics[existingMusicId].should.be.equal(1);
+                    user.musics[musicId].should.be.equal(1);
                     done();
                 });
 
             });
 
-            describe('when user is already saved in the store but already has music in his list of musics', function () {
+            describe('when user is already saved in the store but already has this musicId in his list of musics', function () {
 
                 var userId = "user6561", musicId = "m123222";
                 var req = mockRequest(userId, musicId);
@@ -421,7 +424,7 @@ describe('user route', function () {
                 before(function () {
                     userStore.clear();
                     var user = userStore.newUserObject(userId);
-                    user.musics = [musicId];
+                    user.musics[musicId] = 1;
                     userStore.save(user);
                     userRoute.listen(req, res);
                 })
@@ -442,8 +445,8 @@ describe('user route', function () {
                 it('should append "musicId" as a duplicate to list of musics', function (done) {
                     var user = userStore.findById(userId);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(2);
-                    user.musics.should.matchEach(musicId);
+                    Object.keys(user.musics).should.have.a.lengthOf(1);
+                    user.musics[musicId].should.be.equal(2);
                     done();
                 });
 
@@ -524,7 +527,7 @@ describe('user route', function () {
                     var user = userStore.findById(userId);
                     should.exist(user);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(0);
+                    Object.keys(user.musics).should.have.a.lengthOf(0);
                     done();
                 });
 
@@ -554,7 +557,7 @@ describe('user route', function () {
                     var user = userStore.findById(userId);
                     should.exist(user);
                     should.exist(user.musics);
-                    user.musics.should.have.a.lengthOf(0);
+                    Object.keys(user.musics).should.have.a.lengthOf(0);
                     done();
                 });
 
@@ -632,6 +635,7 @@ describe('user route', function () {
                         }
                     });
 
+                    musicStore.clear();
                     musicStore.save(musicStore.newMusicObject("m1", ["jazz", "old school", "instrumental"]));
                     musicStore.save(musicStore.newMusicObject("m2", ["samba", "60s"]));
                     musicStore.save(musicStore.newMusicObject("m3", ["rock", "alternative"]));
@@ -716,6 +720,7 @@ describe('user route', function () {
                         "musics": {}
                     });
 
+                    musicStore.clear();
                     musicStore.save(musicStore.newMusicObject("m2", ["samba", "60s"]));
                     musicStore.save(musicStore.newMusicObject("m3", ["rock", "alternative"]));
                     musicStore.save(musicStore.newMusicObject("m5", ["folk", "instrumental"]));

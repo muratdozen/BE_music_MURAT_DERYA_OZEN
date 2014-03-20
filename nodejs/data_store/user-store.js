@@ -15,6 +15,13 @@ exports.findById = function (userId) {
 }
 
 /**
+ * @returns All userIds in the index.
+ */
+exports.getAllUserIds = function () {
+    return Object.keys(usersIndexedByUserId);
+}
+
+/**
  * Add a new user to the index if the given userId does not exist in the index,
  * otherwise, update the user object associated with the given userId.
  * @param user
@@ -44,15 +51,15 @@ exports.size = function() {
 
 /**
  * Returns (but does not save to index) a new user object.
- * The new object will be initialized with given userId and empty lists of followers and musics.
+ * The new object will be initialized with given userId and empty lists of followedUsers and musics.
  * @param userId
  * @returns A new user object.
  */
 exports.newUserObject = function (userId) {
     var newUser = {};
     newUser.userId = userId;
-    newUser.followers = [];
-    newUser.musics = [];
+    newUser.followedUsers = {};
+    newUser.musics = {};
     return newUser;
 }
 
