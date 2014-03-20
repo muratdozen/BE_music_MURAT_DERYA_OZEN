@@ -234,8 +234,8 @@ var removeDuplicatesFromSortedResultArray = function (arr, start) {
         var current = arr[i], next = arr[i + 1];
         if (current.ranking == next.ranking) {
             var currentMusicId = current.musicId, nextMusicId = next.musicId;
-            var currentListOfGenres = musicStore.findById(currentMusicId);
-            var nextListOfGenres = musicStore.findById(nextMusicId);
+            var currentListOfGenres = musicStore.findById(currentMusicId).listOfGenres;
+            var nextListOfGenres = musicStore.findById(nextMusicId).listOfGenres;
             if (arraysEqual(currentListOfGenres, nextListOfGenres)) {
                 arr.splice(i, 1);
                 return removeDuplicatesFromSortedResultArray(arr, i);
