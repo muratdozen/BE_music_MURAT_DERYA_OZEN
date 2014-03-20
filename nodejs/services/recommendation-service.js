@@ -37,7 +37,7 @@ var buildGenreNumListenedByUserIndex = function () {
         var listenedMusics = user.musics;
         for (var musicId in listenedMusics) {
             var musicIdNumListened = listenedMusics[musicId];
-            var genres = musicStore.findById(musicId);
+            var genres = musicStore.findById(musicId).listOfGenres;
             var lenGenres = genres.length;
             // for each genre in that particular music
             for (var j = 0; j < lenGenres; ++j) {
@@ -179,8 +179,9 @@ var computeGenreRatings = function (userId) {
 var rec = function (userId) {
     // compute ratings for each genre
     var genreRatings = computeGenreRatings(userId);
+    log("GENRE RATINGS", genreRatings);
 
-    var musicStoreReverseIndex = musicStore.buildReverseIndexByGenre();
+    var genresToMusicIdsMap = musicStore.buildReverseIndexByGenre();
 
     // now that each genre is assigned a rating
     // compute ratings for each music to find out which music contains the highest rated genres.
@@ -188,11 +189,11 @@ var rec = function (userId) {
     var musicRatings = {};
     for (var genre in genreRatings) {
         var genreRating = genreRatings[genre];
-        var musicsReverseIndex = musicStoreReverseIndex[genre];
-        var lenMusics = musicsReverseIndex.length;
+        var musicIds = genresToMusicIdsMap[genre];
+        var lenMusics = musicIds.length;
         for (var i = 0; i < lenMusics; ++i) {
-            var musicId = musicsReverseIndex[i];
-            if (musicRatings[musicId]) musicRatings[musicId] += genreRating;
+            var musicId = musicIds[i];
+            if (musicRatings[musicId]) musicRatings[musicId] *= genreRating;
             else musicRatings[musicId] = genreRating;
         }
     }
@@ -216,5 +217,15 @@ var rec = function (userId) {
     results.sort(function (a, b) {
         return -(a.ranking - b.ranking); // ascending sort
     });
+    log("RECOMMENDATION RESULTS", results);
     return results;
 };
+
+var log = function(header, content) {
+    console.log();
+    console.log("**********************");
+    console.log(header);
+    console.log(content);
+    console.log("**********************");
+    console.log();
+}

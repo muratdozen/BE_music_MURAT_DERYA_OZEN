@@ -202,7 +202,7 @@ describe('user route', function () {
 
                 it('should not save/update a user or follower in the userStore', function (done) {
                     userStore.size().should.be.equal(2);
-                    var followerUser= userStore.findById(fromUserId);
+                    var followerUser = userStore.findById(fromUserId);
                     should.exist(followerUser);
                     should.exist(followerUser.followedUsers);
                     Object.keys(followerUser.followedUsers).should.have.a.lengthOf(0);

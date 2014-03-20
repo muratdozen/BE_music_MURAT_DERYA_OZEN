@@ -5,7 +5,7 @@ var musicsIndexedByMusicId = {};
  * @param musicId
  * @returns The music object associated with the given musicId or undefined if no such music is indexed.
  */
-exports.findById = function(musicId) {
+exports.findById = function (musicId) {
     return musicsIndexedByMusicId[musicId];
 }
 
@@ -23,7 +23,7 @@ exports.getAllMusicIdsAsSet = function () {
  * otherwise, update the music object associated with the given musicId.
  * @param music
  */
-exports.save = function(music) {
+exports.save = function (music) {
     var musicId = music.musicId;
     musicsIndexedByMusicId[musicId] = music;
 }
@@ -31,7 +31,7 @@ exports.save = function(music) {
 /**
  * Remove all musics from the index.
  */
-exports.clear = function() {
+exports.clear = function () {
     musicsIndexedByMusicId = {};
 }
 
@@ -41,17 +41,17 @@ exports.clear = function() {
  * @param musicId
  * @returns A new music object.
  */
-exports.newMusicObject = function(musicId, listOfGenres) {
+exports.newMusicObject = function (musicId, listOfGenres) {
     var newMusic = {};
     newMusic.musicId = musicId;
-    newMusic.listOfSongs = listOfGenres;
+    newMusic.listOfGenres = listOfGenres;
     return newMusic;
 }
 
 exports.buildReverseIndexByGenre = function () {
     var results = {};
     for (var musicId in musicsIndexedByMusicId) {
-        var genreList = musicsIndexedByMusicId[musicId];
+        var genreList = musicsIndexedByMusicId[musicId].listOfGenres;
         var lenGenreList = genreList.length;
         for (var i = 0; i < lenGenreList; ++i) {
             var genre = genreList[i];
