@@ -11,7 +11,7 @@ exports.loadMusicsJsonFile = function (filePath) {
         if (err) {
             console.log('appStartupHelper.loadMusicsJsonFile failed to load musics json file:', err,
                 'Path was', filePath);
-            return;
+            throw err;
         }
 
         data = JSON.parse(data);
